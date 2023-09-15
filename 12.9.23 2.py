@@ -5,6 +5,11 @@ import sqlite3
 import bcrypt
 from tkinter import ttk
 import tkinter as tk
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from datetime import datetime
+
 
 root = Tk()
 root.title('Login')
@@ -108,16 +113,6 @@ def login():
         logout_button = Button(root1, text='Logout', command=lambda: logout_and_show_login(root1),fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=15)
         logout_button.place(x=10,y=10)
 
-
-        def back(image_number):
-           global button_back
-
-           button_back = Button(root1, text="<<<<", command=lambda: back(image_number - 1))
-
-           if image_number == 1:
-               button_back = Button(root1, text="<<<<", state=DISABLED)
-
-           button_back.grid(row=1, column=0)
 
         def create():
             global app
@@ -825,6 +820,92 @@ def login():
 
             apps.mainloop()
 
+        # Define a function to fetch all unique subjects from the database
+        def fetch_all_subjects():
+            try:
+                # Connect to the database
+                connect = sqlite3.connect(database="data.db")
+                conn = connect.cursor()
+
+                # Fetch all unique subjects from the ratings table
+                subjects = conn.execute('SELECT DISTINCT subject_name FROM ratings').fetchall()
+
+                # Close the database connection
+                connect.close()
+
+                return [subject[0] for subject in subjects]
+
+            except Exception as e:
+                print(f"Error fetching subjects: {str(e)}")
+                return []
+
+        # Define a function to calculate the average rating for a given subject
+        def calculate_average_rating(subject_name):
+            try:
+                # Connect to the database
+                connect = sqlite3.connect(database="data.db")
+                conn = connect.cursor()
+
+                # Fetch all ratings for the same class
+                ratings = conn.execute('SELECT rating FROM ratings WHERE subject_name = ?', (subject_name,)).fetchall()
+
+                # Close the database connection
+                connect.close()
+
+                if not ratings:
+                    return None
+
+                # Extract the ratings from the fetched data
+                ratings = [entry[0] for entry in ratings]
+
+                # Calculate the average rating
+                average_rating = sum(ratings) / len(ratings)
+
+                return average_rating
+
+            except Exception as e:
+                print(f"Error calculating average rating for {subject_name}: {str(e)}")
+                return None
+
+        # Define a function to display the average ratings in a histogram in a Tkinter GUI
+        def display_average_ratings_histogram():
+            subjects = fetch_all_subjects()
+
+            if not subjects:
+                print("No subjects found.")
+                return
+
+            # Create a Tkinter GUI window
+            gui = tk.Tk()
+            gui.title("Average Ratings Histogram")
+
+            # Create a Matplotlib figure
+            fig, ax = plt.subplots(figsize=(9, 7), dpi=60)
+
+            # Fetch average ratings for each subject
+            average_ratings = [calculate_average_rating(subject) for subject in subjects]
+
+            # Plot the data as a bar chart
+            ax.bar(subjects, average_ratings, color='blue')
+            ax.set_title("Average Ratings by Subject")
+            ax.set_xlabel("Subject")
+            ax.set_ylabel("Average Rating")
+
+            # Rotate x-axis labels for better readability
+            plt.xticks(rotation=45, ha="right")
+
+            # Create a Tkinter canvas to display the Matplotlib figure
+            canvas = FigureCanvasTkAgg(fig, master=gui)
+            canvas.get_tk_widget().pack()
+
+            # Start the Tkinter main loop
+            gui.mainloop()
+
+        # Create a function to display the average ratings in a histogram when the button is clicked
+        def show_average_ratings_histogram():
+            display_average_ratings_histogram()
+
+
 
 
         myLabel1 = Button(frame, text="STUDENT INFORMATION", command=student_information, fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=25,height=3)
@@ -836,8 +917,9 @@ def login():
         myLabel3 = Button(frame, text="STUDENT LIST", command=student_list, fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=25,height=3)
         myLabel3.grid(row=1, column=0, padx=15, pady=15)
 
-        myLabel4 = Button(frame, text="SHOW RANK CLASSES",  fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=25,height=3)
+        myLabel4 = Button(frame, text="SHOW RANK CLASSES", command=show_average_ratings_histogram, fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=25,height=3)
         myLabel4.grid(row=1, column=1, padx=15, pady=15)
+       
     else:
     # Student login logic
         conn = sqlite3.connect('data.db')
@@ -913,14 +995,15 @@ def login():
                     style.map('Treeview', background=[('selected', '#1A8F2D')])
 
                     tree = ttk.Treeview(apps2, height=20)
-                    tree['columns'] = ('class_type', 'class_day', 'class_start_time', 'class_end_time', 'subject_name', 'venue')
+                    tree['columns'] = ('class_type', 'class_day', 'class_start_time', 'class_end_time', 'subject_name','classes', 'venue')
 
                     tree.column('#0', width=0, stretch=tk.NO)  # Hide the default first column
-                    tree.column('class_type', anchor=tk.CENTER, width=120)
+                    tree.column('class_type', anchor=tk.CENTER, width=110)
                     tree.column('class_day', anchor=tk.CENTER, width=120)
-                    tree.column('class_start_time', anchor=tk.CENTER, width=100)
-                    tree.column('class_end_time', anchor=tk.CENTER, width=100)
-                    tree.column('subject_name', anchor=tk.CENTER, width=200)
+                    tree.column('class_start_time', anchor=tk.CENTER, width=90)
+                    tree.column('class_end_time', anchor=tk.CENTER, width=90)
+                    tree.column('subject_name', anchor=tk.CENTER, width=180)
+                    tree.column('classes', anchor=tk.CENTER, width=120)
                     tree.column('venue', anchor=tk.CENTER, width=140)
 
                     tree.heading('class_type', text='Type', anchor=tk.CENTER)
@@ -928,13 +1011,14 @@ def login():
                     tree.heading('class_start_time', text='Start Time', anchor=tk.CENTER)
                     tree.heading('class_end_time', text='End Time', anchor=tk.CENTER)
                     tree.heading('subject_name', text='Subject', anchor=tk.CENTER)
+                    tree.heading('classes', text='Class', anchor=tk.CENTER)
                     tree.heading('venue', text='Venue', anchor=tk.CENTER)
 
-                    tree.place(x=70, y=25)
+                    tree.place(x=35, y=25)
 
                     i = 0
                     for row in conn:
-                        tree.insert('', i, text=" ", values=(row[5], row[8], row[9], row[10], row[2], row[11]))
+                        tree.insert('', i, text=" ", values=(row[5], row[9], row[10], row[11], row[2], row[7],row[12]))
 
                     apps2.mainloop()
 
@@ -991,43 +1075,30 @@ def login():
 
 
                 
-                def clashing():
-                    clashing_course_window = tk.Toplevel(root60)
-                    clashing_course_window.title("Detect clashing timetable")
-                    clashing_course_window.geometry('925x475+300+200')
-                    clashing_course_window.resizable(False, False)
-                    clashing_course_window.config(bg='#D3D3D3')
 
-                    clashinglLabel = tk.Label(clashing_course_window, text="Detect clashing timetable", bg='#D3D3D3', font=('Calibri', 20))
-                    clashinglLabel.place(x=300,y=10)
-
-
-                # Create a dictionary to store registered courses for each student
                 registered_courses = {}
-
-                # Initialize selected_index as a global variable
                 selected_index = 0
 
                 def register_course_page():
+                    def refresh():
+                        root.destroy()
+                        register_course_page()
                     def load_courses():
                         conn = sqlite3.connect('data.db')
                         cursor = conn.cursor()
-
-                        cursor.execute("SELECT subject_name, subject_code, credit_hour, class_type, lecture_name, capacity, class_day, class_time, venue FROM data")
+                        cursor.execute("SELECT subject_name, subject_code, credit_hour, class_type, lecture_name, classes, capacity, class_day, class_time, venue FROM data")
                         courses = cursor.fetchall()
-
                         conn.close()
                         return courses
 
                     def update_selected_course(event):
-                        global selected_index  # Use the global selected_index
+                        global selected_index
                         selection = course_tree.selection()
                         if selection:
                             selected_index = course_tree.index(selection)
                             selected_course_info = courses[selected_index]
-                            subject_name, subject_code, credit_hour, class_type, lecture_name, capacity, class_day, class_time, venue = selected_course_info
+                            subject_name, subject_code, credit_hour, class_type, lecture_name, classes, capacity, class_day, class_time, venue = selected_course_info
 
-                            # Set the values in the entry fields and disable them
                             course_entry.config(state='normal')
                             course_entry.delete(0, tk.END)
                             course_entry.insert(0, subject_name)
@@ -1042,11 +1113,21 @@ def login():
                             class_type_entry.delete(0, tk.END)
                             class_type_entry.insert(0, class_type)
                             class_type_entry.config(state='readonly')
+                            
+                            credit_hour_entry.config(state='normal')
+                            credit_hour_entry.delete(0, tk.END)
+                            credit_hour_entry.insert(0, credit_hour)
+                            credit_hour_entry.config(state='readonly')
 
                             lecture_name_entry.config(state='normal')
                             lecture_name_entry.delete(0, tk.END)
                             lecture_name_entry.insert(0, lecture_name)
                             lecture_name_entry.config(state='readonly')
+
+                            classes_entry.config(state='normal')
+                            classes_entry.delete(0, tk.END)
+                            classes_entry.insert(0, classes)
+                            classes_entry.config(state='readonly')
 
                             class_day_entry.config(state='normal')
                             class_day_entry.delete(0, tk.END)
@@ -1073,12 +1154,82 @@ def login():
                             capacity_entry.insert(0, capacity)
                             capacity_entry.config(state='readonly')
 
+                    def check_class_capacity(course_name, class_type, classes):
+                        conn = sqlite3.connect('data.db')
+                        cursor = conn.cursor()
+
+                        cursor.execute('''
+                            CREATE TABLE IF NOT EXISTS register (
+                                id INTEGER PRIMARY KEY,
+                                student_id TEXT,
+                                subject_name TEXT,
+                                subject_code TEXT,
+                                credit_hour INTEGER,
+                                class_type TEXT,
+                                lecture_name TEXT,
+                                classes TEXT,
+                                capacity INTEGER,
+                                class_day TEXT,
+                                class_start_time TEXT,
+                                class_end_time TEXT,
+                                venue TEXT
+                            )''')
+
+                        cursor.execute("SELECT COUNT(*) FROM register WHERE subject_name = ? AND class_type = ? AND classes = ?",
+                                    (course_name, class_type, classes))
+                        registered_count = cursor.fetchone()[0]
+
+                        conn.close()
+                        return registered_count
+
+                    def view_class_capacity():
+                        course_name = course_entry.get()
+                        class_type = class_type_entry.get()
+                        classes = classes_entry.get()
+
+                        if not course_name or not class_type or not classes:
+                            messagebox.showerror("", "Please enter both course name and class type.")
+                            return
+
+                        capacity = capacity_entry.get()
+                        registered_count = check_class_capacity(course_name, class_type, classes)
+                        available_places = int(capacity) - int(registered_count)
+
+                        message = f"Class: {course_name} ({class_type})\n"
+                        message += f"Capacity: {capacity}\n"
+                        message += f"Registered Students: {registered_count}\n"
+                        message += f"Available Places: {available_places}"
+
+                        messagebox.showinfo("Class Capacity", message)
+
+                    def check_course_clashes(student_id, class_day, class_time):
+                        conn = sqlite3.connect('data.db')
+                        cursor = conn.cursor()
+
+                        # Fetch all the registrations for the given student
+                        cursor.execute("SELECT class_day, class_start_time, class_end_time FROM register WHERE student_id = ?", (student_id,))
+                        existing_registrations = cursor.fetchall()
+
+                        # Check if the new registration clashes with any existing registration
+                        for existing_registration in existing_registrations:
+                            existing_class_day, existing_class_start_time, existing_class_end_time = existing_registration
+                            # Check for clashes
+                            if (class_day == existing_class_day and
+                                (class_time >= existing_class_start_time and class_time <= existing_class_end_time)):
+                                conn.close()
+                                return True  # There is a clash
+
+                        conn.close()
+                        return False  # No clashes found
+
                     def save_registration():
                         student_id = student_id_entry.get()
                         course_name = course_entry.get()
                         course_code = course_code_entry.get()
                         class_type = class_type_entry.get()
+                        credit_hour = credit_hour_entry.get()
                         lecture_name = lecture_name_entry.get()
+                        classes = classes_entry.get()
                         class_day = class_day_entry.get()
                         class_start_time = class_start_time_entry.get()
                         class_end_time = class_end_time_entry.get()
@@ -1086,21 +1237,34 @@ def login():
                         capacity = capacity_entry.get()
                         global userid_entry2
 
-                        if student_id == userid_entry2.get():
-                            # Check if the student has already registered for this course
-                            if student_id in registered_courses:
-                                if course_code in registered_courses[student_id]:
-                                    messagebox.showerror("", "You have already registered for this course.")
-                                    return
-                            else:
-                                registered_courses[student_id] = []
+                        current_capacity = check_class_capacity(course_name, class_type, classes)
 
-                            selected_course_info = courses[selected_index]
-                            subject_name, subject_code, credit_hour, _, _, _, _, _, _ = selected_course_info
+                        if student_id == userid_entry2.get():
+                            if int(current_capacity) >= int(capacity):
+                                messagebox.showerror("", "Class is full. Registration is not allowed.")
+                                return
+
+                            # if check_course_clashes(student_id, class_day, class_start_time + '-' + class_end_time):
+                            #     messagebox.showerror("", "Time or day clash with a registered course.")
+                            #     return
+
+                            if check_course_clashes(student_id, class_day, class_start_time + '-' + class_end_time):
+                                messagebox.showerror("", "Time or day clash with a registered course.")
+                                return
 
                             conn = sqlite3.connect('data.db')
                             cursor = conn.cursor()
+                            cursor.execute("SELECT COUNT(*) FROM register WHERE student_id = ? AND subject_name = ? AND subject_code = ? AND class_type = ? AND classes = ?",
+                                        (student_id, course_name, course_code , class_type, classes))
+                            existing_registration_count = cursor.fetchone()[0]
+                            conn.close()
 
+                            if existing_registration_count > 0:
+                                messagebox.showerror("", "You have already registered for this course.")
+                                return
+
+                            conn = sqlite3.connect('data.db')
+                            cursor = conn.cursor()
                             cursor.execute('''
                                 CREATE TABLE IF NOT EXISTS register (
                                     id INTEGER PRIMARY KEY,
@@ -1110,6 +1274,7 @@ def login():
                                     credit_hour INTEGER,
                                     class_type TEXT,
                                     lecture_name TEXT,
+                                    classes TEXT,
                                     capacity INTEGER,
                                     class_day TEXT,
                                     class_start_time TEXT,
@@ -1117,20 +1282,24 @@ def login():
                                     venue TEXT
                                 )''')
 
-                            cursor.execute('INSERT INTO register (student_id, subject_name, subject_code, credit_hour, class_type, lecture_name, capacity, class_day, class_start_time, class_end_time, venue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                                        (student_id, course_name, subject_code, credit_hour, class_type, lecture_name, capacity, class_day, class_start_time, class_end_time, venue))
+                            cursor.execute('INSERT INTO register (student_id, subject_name, subject_code, credit_hour, class_type, lecture_name,classes, capacity, class_day, class_start_time, class_end_time, venue) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                                        (student_id, course_name, course_code, credit_hour, class_type, lecture_name, classes, capacity, class_day, class_start_time, class_end_time, venue))
 
                             conn.commit()
                             conn.close()
 
-                            # Add the course to the list of registered courses for the student
-                            registered_courses[student_id].append(course_code)
+                            if student_id in registered_courses:
+                                registered_courses[student_id].append(course_code)
+                            else:
+                                registered_courses[student_id] = [course_code]
 
                             course_entry.delete(0, tk.END)
                             course_code_entry.delete(0, tk.END)
                             student_id_entry.delete(0, tk.END)
                             class_type_entry.delete(0, tk.END)
+                            credit_hour_entry.delete(0, tk.END)
                             lecture_name_entry.delete(0, tk.END)
+                            classes_entry.delete(0, tk.END)
                             class_day_entry.delete(0, tk.END)
                             class_start_time_entry.delete(0, tk.END)
                             class_end_time_entry.delete(0, tk.END)
@@ -1140,25 +1309,54 @@ def login():
                         else:
                             messagebox.showerror("", "Invalid Student ID")
 
+                    def delete_timetable_entry(event):
+                        selected_item = tree.selection()[0]  # 获取选中的行
+                        response = messagebox.askyesno("Confirm deletion", "Are you sure you want to delete this course?")
+                        if response == True:
+                            # 用户点击了"Yes"，删除选中的行
+                            course_name = tree.item(selected_item, 'values')[4]  # 获取选中行的课程名称
+                            class_type = tree.item(selected_item, 'values')[0]  # 获取选中行的课程类型
+                            classes = tree.item(selected_item, 'values')[5]  # 获取选中行的班级
+                            delete_course_from_database(course_name, class_type, classes)
+                            tree.delete(selected_item)
+                        # 如果用户点击了"No"，不执行任何操作
+
+                    def delete_course_from_database(course_name, class_type, classes):
+                        # 从数据库中删除课程信息的函数
+                        conn = sqlite3.connect('data.db')
+                        cursor = conn.cursor()
+                        cursor.execute("DELETE FROM register WHERE subject_name = ? AND class_type = ? AND classes = ?",
+                                    (course_name, class_type, classes))
+                        conn.commit()
+                        conn.close()
+
+
+                    def close_register():
+                        root.destroy()
+
+                        
+
                     root = tk.Tk()
                     root.title("Course Registration")
                     root.resizable(False, False)
                     root.config(bg='#D3D3D3')
-                    root.geometry('925x475+300+200')
+                    # Configure the window to be full screen
+                    root.attributes('-fullscreen', True)
+                    # Configure the window manager attributes for decorations
+                    root.overrideredirect(False)  # Set to True to remove decorations
 
-                    # Create the course table at the top
                     style = ttk.Style(root)
                     style.theme_use('clam')
                     style.configure('Treeview', foreground='#fff', background='#000', fieldbackground='#313837')
                     style.map('Treeview', background=[('selected', '#1A8F2D')])
 
-                    course_tree = ttk.Treeview(root, height=5)
-                    course_tree = ttk.Treeview(root, columns=("ID", "Course Name", "Course Code", "Credit Hours", "Class Type", "Lecture Name", 'class', "Capacity", "Class Day", "Class Time", "Venue"))
+                    # course_tree = ttk.Treeview(root, height=10)
+                    course_tree = ttk.Treeview(root,height=18, columns=("ID", "Course Name", "Course Code", "Credit Hours", "Class Type", "Lecture Name", "Classes", "Capacity", "Class Day", "Class Time", "Venue"))
                     course_tree.column('#0', width=0, stretch=tk.NO)
                     course_tree['show'] = 'headings'
-                    columns = ("ID", "Course Name", "Course Code", "Credit Hours", "Class Type", "Lecture Name", 'class', "Capacity", "Class Day", "Class Time", "Venue")
+                    columns = ("ID", "Course Name", "Course Code", "Credit Hours", "Class Type", "Lecture Name", "Classes", "Capacity", "Class Day", "Class Time", "Venue")
                     for col in columns:
-                        course_tree.column(col, width=84)
+                        course_tree.column(col, width=97)
                         course_tree.heading(col, text=col, anchor=tk.CENTER)
 
                     conn = sqlite3.connect('data.db')
@@ -1168,178 +1366,275 @@ def login():
                     for row in cursor.fetchall():
                         course_tree.insert("", "end", values=(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10]))
 
-                    course_tree.grid(row=0, column=0, columnspan=10)
+                    course_tree.place(x=10,y=10)
                     course_tree.bind("<<TreeviewSelect>>", update_selected_course)
 
-                    # Label and Entry for course selection
                     course_label = tk.Label(root, text="Select Course:", bg='#D3D3D3')
                     courses = load_courses()
-                    course_entry = ttk.Entry(root, state='readonly')  # Set the state to 'readonly'
+                    course_entry = ttk.Entry(root, state='readonly')
 
-                    # Label and Entry for course code
                     course_code_label = tk.Label(root, text="Course code:", bg='#D3D3D3')
-                    course_code_entry = ttk.Entry(root, state='readonly')  # Set the state to 'readonly'
+                    course_code_entry = ttk.Entry(root, state='readonly')
 
-                    # Label and Entry for student ID
                     student_id_label = tk.Label(root, text="Student ID:", bg='#D3D3D3')
                     student_id_entry = ttk.Entry(root)
 
-                    # Label and Entry for class type
                     class_type_label = tk.Label(root, text="Class Type:", bg='#D3D3D3')
-                    class_type_entry = ttk.Entry(root, state='readonly')  # Set the state to 'readonly'
+                    class_type_entry = ttk.Entry(root, state='readonly')
 
-                    # Label and Entry for lecture name
+                    credit_hour_label = tk.Label(root, text="Credit_hour:", bg='#D3D3D3')
+                    credit_hour_entry = ttk.Entry(root, state='readonly')
+
                     lecture_name_label = tk.Label(root, text="Lecture Name:", bg='#D3D3D3')
-                    lecture_name_entry = ttk.Entry(root, state='readonly')  # Set the state to 'readonly'
+                    lecture_name_entry = ttk.Entry(root, state='readonly')
 
-                    # Label and Entry for class day
+                    classes_label = tk.Label(root, text="Classes:", bg='#D3D3D3')
+                    classes_entry = ttk.Entry(root, state='readonly')
+
                     class_day_label = tk.Label(root, text="Class Day:", bg='#D3D3D3')
-                    class_day_entry = ttk.Entry(root, state='readonly')  # Set the state to 'readonly'
+                    class_day_entry = ttk.Entry(root, state='readonly')
 
-                    # Label and Entry for class start time
                     class_start_time_label = tk.Label(root, text="Class Start Time:", bg='#D3D3D3')
-                    class_start_time_entry = ttk.Entry(root, state='readonly')  # Set the state to 'readonly'
+                    class_start_time_entry = ttk.Entry(root, state='readonly')
 
-                    # Label and Entry for class end time
                     class_end_time_label = tk.Label(root, text="Class End Time:", bg='#D3D3D3')
-                    class_end_time_entry = ttk.Entry(root, state='readonly')  # Set the state to 'readonly'
+                    class_end_time_entry = ttk.Entry(root, state='readonly')
 
-                    # Label and Entry for venue
                     venue_label = tk.Label(root, text="Venue:", bg='#D3D3D3')
-                    venue_entry = ttk.Entry(root, state='readonly')  # Set the state to 'readonly'
+                    venue_entry = ttk.Entry(root, state='readonly')
 
-                    # Label and Entry for capacity
                     capacity_label = tk.Label(root, text="Capacity:", bg='#D3D3D3')
-                    capacity_entry = ttk.Entry(root, state='readonly')  # Set the state to 'readonly'
+                    capacity_entry = ttk.Entry(root, state='readonly')
 
-                    # Button to save the registration
                     save_button = tk.Button(root, text="Save Registration", command=save_registration)
 
                     # Arrange widgets in a grid
-                    course_label.grid(row=1, column=4)
-                    course_entry.grid(row=1, column=5)
-                    course_code_label.grid(row=2, column=4)
-                    course_code_entry.grid(row=2, column=5)
-                    student_id_label.grid(row=3, column=4)
-                    student_id_entry.grid(row=3, column=5)
-                    class_type_label.grid(row=4, column=4)
-                    class_type_entry.grid(row=4, column=5)
-                    lecture_name_label.grid(row=5, column=4)
-                    lecture_name_entry.grid(row=5, column=5)
-                    class_day_label.grid(row=6, column=4)
-                    class_day_entry.grid(row=6, column=5)
-                    class_start_time_label.grid(row=7, column=4)
-                    class_start_time_entry.grid(row=7, column=5)
-                    class_end_time_label.grid(row=8, column=4)
-                    class_end_time_entry.grid(row=8, column=5)
-                    venue_label.grid(row=9, column=4)
-                    venue_entry.grid(row=9, column=5)
-                    capacity_label.grid(row=10, column=4)
-                    capacity_entry.grid(row=10, column=5)
-                    save_button.grid(row=11, column=5)
+                    course_label.place(x=1100,y=20)
+                    course_entry.place(x=1200,y=20)
 
-                def survey_rank():
-                    # Create or connect to the database file
+                    course_code_label.place(x=1100,y=50)
+                    course_code_entry.place(x=1200,y=50)
+
+                    student_id_label.place(x=1100,y=80)
+                    student_id_entry.place(x=1200,y=80)
+
+                    class_type_label.place(x=1100,y=110)
+                    class_type_entry.place(x=1200,y=110)
+
+                    credit_hour_label.place(x=1100,y=140)
+                    credit_hour_entry.place(x=1200,y=140)
+
+                    lecture_name_label.place(x=1100,y=170)
+                    lecture_name_entry.place(x=1200,y=170)
+
+                    class_day_label.place(x=1100,y=200)
+                    class_day_entry.place(x=1200,y=200)
+
+                    class_start_time_label.place(x=1100,y=230)
+                    class_start_time_entry.place(x=1200,y=230)
+
+                    class_end_time_label.place(x=1100,y=260)
+                    class_end_time_entry.place(x=1200,y=260)
+
+                    venue_label.place(x=1100,y=290)
+                    venue_entry.place(x=1200,y=290)
+
+                    classes_label.place(x=1100,y=320)
+                    classes_entry.place(x=1200,y=320)
+
+                    capacity_label.place(x=1100,y=350)
+                    capacity_entry.place(x=1200,y=350)
+
+                    save_button.place(x=1200,y=400)
+
+                    close_button = tk.Button(root, text="close", command=close_register)
+                    close_button.place(x=1200,y=500)
+                    
+                    view_capacity_button = tk.Button(root, text="View Class Capacity", command=view_class_capacity)
+                    view_capacity_button.place(x=1200,y=450)
+
+                    refresh_button = tk.Button(root, text="Refresh", command=refresh)
+                    refresh_button.place(x=1200,y=600)
+
+                    title_label = tk.Label(root, text="Draft Timetable", bg='#D3D3D3')
+                    title_label.place(x=500,y=405)
+
+                    global userid_entry2
+
                     connect = sqlite3.connect(database="data.db")
-
-                    # Create a cursor object to execute SQL commands
                     conn = connect.cursor()
 
-                    # Create a table to store the ratings if it doesn't exist
-                    conn.execute('''
-                        CREATE TABLE IF NOT EXISTS ratings (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            lecture_name TEXT,
-                            subject_name TEXT,
-                            rating INTEGER
-                        )
-                    ''')
+                    student_id = userid_entry2.get()
 
-                    # Create a table to store survey submissions if it doesn't exist
+                    # Create a SQL query to retrieve the user's timetable data sorted by day
+                    timetable_query = """
+                    SELECT * FROM register 
+                    WHERE student_id = ? 
+                    ORDER BY 
+                        CASE 
+                            WHEN class_day = 'MONDAY' THEN 7
+                            WHEN class_day = 'TUESDAY' THEN 6
+                            WHEN class_day = 'WEDNESDAY' THEN 5
+                            WHEN class_day = 'THURSDAY' THEN 4
+                            WHEN class_day = 'FRIDAY' THEN 3
+                            WHEN class_day = 'SATURDAY' THEN 2
+                            WHEN class_day = 'SUNDAY' THEN 1
+                        END
+                    """
+                    conn.execute(timetable_query, [student_id])
+
+                    tree = ttk.Treeview(root)
+                    tree['show'] = 'headings'
+
+                    font1 = ('Arial', 15, 'bold')
+                    font2 = ('Arial', 12, 'bold')
+
+                    style = ttk.Style(root)
+                    style.theme_use('clam')
+                    style.configure('Treeview', font=font2, foreground='#fff', background='#000', fieldbackground='#313837')
+                    style.map('Treeview', background=[('selected', '#1A8F2D')])
+
+                    tree = ttk.Treeview(root, height=17)
+                    tree['columns'] = ('class_type', 'class_day', 'class_start_time', 'class_end_time', 'subject_name','classes', 'venue')
+
+                    tree.column('#0', width=0, stretch=tk.NO)  # Hide the default first column
+                    tree.column('class_type', anchor=tk.CENTER, width=160)
+                    tree.column('class_day', anchor=tk.CENTER, width=150)
+                    tree.column('class_start_time', anchor=tk.CENTER, width=100)
+                    tree.column('class_end_time', anchor=tk.CENTER, width=100)
+                    tree.column('subject_name', anchor=tk.CENTER, width=200)
+                    tree.column('classes', anchor=tk.CENTER, width=195)
+                    tree.column('venue', anchor=tk.CENTER, width=160)
+
+                    tree.heading('class_type', text='Type', anchor=tk.CENTER)
+                    tree.heading('class_day', text='Day', anchor=tk.CENTER)
+                    tree.heading('class_start_time', text='Start Time', anchor=tk.CENTER)
+                    tree.heading('class_end_time', text='End Time', anchor=tk.CENTER)
+                    tree.heading('subject_name', text='Subject', anchor=tk.CENTER)
+                    tree.heading('classes', text='Class', anchor=tk.CENTER)
+                    tree.heading('venue', text='Venue', anchor=tk.CENTER)
+
+                    tree.bind("<Double-1>", delete_timetable_entry)
+
+                    tree.place(x=10, y=430)
+
+                    i = 0
+                    for row in conn:
+                        tree.insert('', i, text=" ", values=(row[5], row[9], row[10], row[11], row[2], row[7],row[12]))
+
+
+                def open_rating_popup(subject_name, lecture_name, student_id):
+                    connect = sqlite3.connect(database="data.db")
+                    conn = connect.cursor()
+
+                    # Check if the student has already submitted a survey for this subject
+                    existing_survey_query = "SELECT id FROM survey_submissions WHERE student_id = ? AND subject_name = ?"
+                    
+                    # Create the "survey_submissions" table if it doesn't exist
                     conn.execute('''
                         CREATE TABLE IF NOT EXISTS survey_submissions (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             student_id INTEGER,
                             subject_name TEXT
                         )
-                    ''') 
-                    def open_rating_popup():
-                        
+                    ''')
+                    
+                    conn.execute(existing_survey_query, (student_id, subject_name))
+                    existing_survey = conn.fetchone()
+
+                    if existing_survey:
+                        # If the student has already submitted a survey for this subject, show an error message
+                        messagebox.showerror("Survey Already Submitted", f"You have already submitted a survey for {subject_name}.")
+                    else:
+                        def save_rating():
+                            rating = rating_value.get()
+                            connect = sqlite3.connect(database="data.db")
+                            conn = connect.cursor()
                             
+                            # Create a table to store the ratings if it doesn't exist
+                            conn.execute('''
+                                CREATE TABLE IF NOT EXISTS ratings (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    lecture_name TEXT,
+                                    subject_name TEXT,
+                                    rating INTEGER
+                                )
+                            ''')
 
-                        global userid_entry2
-                        # Get the selected item from the Treeview
-                        selected_item = tree.selection()
-                        
-                        if selected_item:
-                            # Get the values of the selected item
-                            values = tree.item(selected_item, 'values')
-                            
-                            # Extract relevant data from the values
-                            subject_name = values[1]
-                            lecture_name = values[3]
+                            # Create a table to store survey submissions if it doesn't exist
+                            conn.execute('''
+                                CREATE TABLE IF NOT EXISTS survey_submissions (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    student_id INTEGER,
+                                    subject_name TEXT
+                                )
+                            ''')
 
-                            # Check if the student has already submitted a survey for this subject
-                            student_id = userid_entry2.get()  # Replace with the actual student ID (you need a way to identify the student)
-                            existing_submission = conn.execute("SELECT * FROM survey_submissions WHERE student_id = ? AND subject_name = ?",
-                                                            (student_id, subject_name)).fetchone()
+                            # Insert rating data into the database
+                            conn.execute("INSERT INTO ratings (lecture_name, subject_name, rating) VALUES (?, ?, ?)",
+                                        (lecture_name, subject_name, rating))
 
-                            if existing_submission:
-                                # The student has already submitted a survey for this subject
-                                messagebox.showinfo("Survey Already Submitted", f"You have already submitted a survey for {subject_name}.")
-                            else:
-                                def save_rating():
-                                    rating = rating_value.get()
+                            # Insert survey submission record
+                            conn.execute("INSERT INTO survey_submissions (student_id, subject_name) VALUES (?, ?)",
+                                        (student_id, subject_name))
 
-                                    # Insert the rating into the database
-                                    conn.execute("INSERT INTO ratings (lecture_name, subject_name, rating) VALUES (?, ?, ?)",
-                                                (lecture_name, subject_name, rating))
+                            # Commit the database changes
+                            connect.commit()
 
-                                    # Insert the survey submission record
-                                    conn.execute("INSERT INTO survey_submissions (student_id, subject_name) VALUES (?, ?)",
-                                                (student_id, subject_name))
+                            # Close both the rating popup window and the message box
+                            popup_window.destroy()
+                            messagebox.showinfo("Survey Submitted", f"Thank you for submitting a survey for {subject_name}. Your feedback has been recorded.")
 
-                                    # Commit the changes to the database
-                                    connect.commit()
+                            # Print the rating information
+                            print(f"Rating for {subject_name} - {lecture_name}: {rating}")
 
-                                    print(f"Rating for {subject_name} - {lecture_name}: {rating}")
+                        # Create the rating popup window
+                        popup_window = tk.Toplevel()
+                        popup_window.title("Rate Lecture")
+                        popup_window.geometry("300x200")
+                        popup_window.config(bg='#D3D3D3')
 
-                                
+                        # Add labels and a radio button-based rating system
+                        label = tk.Label(popup_window, bg='#D3D3D3', text=f"Rate the lecture for {subject_name} - {lecture_name}")
+                        label.pack(pady=10)
 
-                                # Create a popup window for rating
-                                popup_window = tk.Toplevel()
-                                popup_window.title("Rate Lecture")
-                                popup_window.geometry("300x200")
+                        rating_value = tk.IntVar()
 
-                                # Add labels and a radio button-based rating system with emoji stars
-                                label = Label(popup_window, text=f"Rate the lecture for {subject_name} - {lecture_name}")
-                                label.pack(pady=10)
+                        def create_radio_button(value, text):
+                            radio_button = tk.Radiobutton(popup_window, text=text, bg='#D3D3D3', variable=rating_value, value=value)
+                            radio_button.pack(anchor=tk.W)
 
-                                rating_value = IntVar()
+                        # Create radio buttons with star emoji symbols, ranging from 1 to 5
+                        emoji_stars = ["★", "★★", "★★★", "★★★★", "★★★★★"]
+                        for i, emoji_star in enumerate(emoji_stars):
+                            create_radio_button(i + 1, emoji_star)
 
-                                def create_radio_button(value, text):
-                                    radio_button = Radiobutton(popup_window, text=text, variable=rating_value, value=value)
-                                    radio_button.pack(anchor=W)
+                        # Add a button to save the rating
+                        save_button = tk.Button(popup_window, text="Save Rating", command=save_rating)
+                        save_button.pack(pady=5)
 
-                                # Create radio buttons with emoji stars for ratings 1-5
-                                emoji_stars = ["★", "★★", "★★★", "★★★★", "★★★★★"]
-                                for i, emoji_star in enumerate(emoji_stars):
-                                    create_radio_button(i + 1, emoji_star)
+                def survey_rank():
+                    global userid_entry2
 
-                                # Add a button to save the rating
-                                save_button = Button(popup_window, text="Save Rating", command=save_rating)
-                                save_button.pack(pady=5)
-                                
-                                
                     apps3 = tk.Tk()
-                    apps3.title('Rank')
+                    apps3.title('Survey Rank')
                     apps3.geometry('925x475+300+200')
                     apps3.config(bg='#D3D3D3')
 
-                    myLabel = Label(apps3, text="Rank", bg='#D3D3D3', font=('Calibri, 15'))
-                    myLabel.place(x=430, y=1)
+                    myLabel = tk.Label(apps3, text="Survey Rank", bg='#D3D3D3', font=('Calibri, 15'))
+                    myLabel.place(x=400, y=1)
 
-                    conn.execute("SELECT * FROM data")
+                    connect = sqlite3.connect(database="data.db")
+                    conn = connect.cursor()
+
+                    student_id = userid_entry2.get()
+
+                    # Create an SQL query to get the student's course information
+                    timetable_query = """
+                    SELECT * FROM register 
+                    WHERE student_id = ?
+                    """
+                    conn.execute(timetable_query, [student_id])
 
                     tree = ttk.Treeview(apps3)
                     tree['show'] = 'headings'
@@ -1361,23 +1656,112 @@ def login():
                     tree.column('subject_code', anchor=tk.CENTER, width=200)
                     tree.column('lecture_name', anchor=tk.CENTER, width=200)
 
-
                     tree.heading('class_type', text='Type', anchor=tk.CENTER)
                     tree.heading('subject_name', text='Subject', anchor=tk.CENTER)
                     tree.heading('subject_code', text='Subject code', anchor=tk.CENTER)
                     tree.heading('lecture_name', text='Lecture name', anchor=tk.CENTER)
 
-
                     tree.place(x=50, y=25)
 
                     i = 0
                     for ro in conn:
-                        tree.insert('', i, text=" ", values=(ro[4], ro[1], ro[2], ro[5]))
+                        tree.insert('', i, text=" ", values=(ro[5], ro[2], ro[3], ro[6]))
 
-                    # Bind the open_rating_popup function to the Treeview's item selection event
-                    tree.bind('<ButtonRelease-1>', lambda event: open_rating_popup())
+                    # Bind the function to open the rating popup window to the Treeview item selection event
+                    tree.bind('<ButtonRelease-1>', lambda event: open_rating_popup(tree.item(tree.selection())['values'][1], tree.item(tree.selection())['values'][3], student_id))
 
                     apps3.mainloop()
+
+                def student_list_in_class():
+                    def get_classes_from_register():
+                        conn = sqlite3.connect('data.db')
+                        cursor = conn.cursor()
+
+                        global userid_entry2
+                        student_id = userid_entry2.get()
+
+                        # 查询学生已注册的班级
+                        cursor.execute('''
+                            SELECT DISTINCT register.classes
+                            FROM register
+                            WHERE register.student_id = ?
+                        ''', (student_id,))
+
+                        classes = [row[0] for row in cursor.fetchall()]
+
+                        conn.close()
+
+                        return classes
+
+                    def get_students_registered_for_class(selected_class):
+                        global userid_entry2  # 声明全局变量
+                        conn = sqlite3.connect('data.db')
+                        cursor = conn.cursor()
+
+                        # 获取当前学生的ID
+                        student_id = userid_entry2.get()
+
+                        # 查询学生是否注册了选定的班级
+                        cursor.execute('''
+                            SELECT users.userid, users.username
+                            FROM users
+                            INNER JOIN register ON users.userid = register.student_id
+                            WHERE register.classes = ? 
+                        ''', (selected_class,))
+
+                        registered_students = cursor.fetchall()
+
+                        conn.close()
+
+                        return registered_students
+
+
+                    def show_students_for_selected_class():
+                        selected_class = classes_combobox.get()
+                        if not selected_class:
+                            return
+
+                        registered_students = get_students_registered_for_class(selected_class)
+
+                        if registered_students:
+                            result_tree.delete(*result_tree.get_children())  # Clear Treeview content
+                            for student in registered_students:
+                                result_tree.insert('', 'end', values=(student[0], student[1]))
+                            
+                            # 设置第一列的标题为 "Student ID"
+                            result_tree.heading('#1', text='Student ID')
+                        else:
+                            messagebox.showinfo("Message", "No students are registered for this class.")
+
+
+
+                    app111 = tk.Tk()
+                    app111.title('Student List In Class')
+
+                    # Configure the style
+                    style = ttk.Style(app111)
+                    style.theme_use('clam')
+                    style.configure('Treeview', font=('Arial', 12, 'bold'), foreground='#fff', background='#000', fieldbackground='#313837')
+                    style.map('Treeview', background=[('selected', '#1A8F2D')])
+
+                    # Get all classes and create a combobox
+                    classes_from_register = get_classes_from_register()
+                    classes_combobox = ttk.Combobox(app111, values=classes_from_register)
+                    classes_combobox.pack()
+
+                    search_button = tk.Button(app111, text='Search', command=show_students_for_selected_class)
+                    search_button.pack()
+
+                    # Create Treeview to display student list
+                    result_tree = ttk.Treeview(app111, columns=('Student ID', 'Student Name'))
+                    result_tree.heading('#1', text='Student ID')
+                    result_tree.heading('#2', text='Student Name')
+                    result_tree.pack()
+
+                    # Hide the first column
+                    result_tree.column('#0', width=0, stretch=tk.NO)
+
+                    app111.mainloop()
 
                                                  
                 button_frame = LabelFrame(root60,text="Click Here ...",bg="#ECECEC", padx=80, pady=60)
@@ -1386,16 +1770,14 @@ def login():
                 timetable_button =Button(button_frame, text="View Timetable",command=view_timetable, fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=25,height=2)
                 browse_button =Button(button_frame, text="View Courses Offered", command=browse_course, fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=25,height=2)
                 register_button =Button(button_frame, text="Register Courses",command=register_course_page, fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=25,height=2)
-                clashing_button =Button(button_frame, text="Detect Clashing Timetable", command=clashing, fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=25,height=2)
                 survey_button =Button(button_frame, text="Survey Rank", command=survey_rank, fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=25,height=2)
-                student_list_button =Button(button_frame, text="Class Student List", fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=25,height=2)
+                student_list_button =Button(button_frame, text="Class Student List",command=student_list_in_class, fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=25,height=2)
 
                 timetable_button.grid(row=0, column=0, padx=15, pady=10)
                 browse_button.grid(row=0, column=1, padx=15, pady=10)
                 register_button.grid(row=1, column=0, padx=15, pady=10)
-                clashing_button.grid(row=1, column=1, padx=15, pady=10)
-                survey_button.grid(row=2, column=0, padx=15, pady=10)
-                student_list_button.grid(row=2, column=1, padx=15, pady=10)
+                survey_button.grid(row=2, column=0, columnspan=2, pady=10, sticky="n")
+                student_list_button.grid(row=1, column=1, padx=15, pady=10)
 
                 # Add a Logout button to go back to the login page
                 logout_button = Button(root60, text='Logout', command=lambda: logout_and_show_login(root60),fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=15)
