@@ -99,7 +99,7 @@ def login():
         # Admin login logic
         root.withdraw()  # Hide the original login window
         root1 = Toplevel(root)
-        root1.title('Admin main page')
+        root1.title('ADMIN MAIN PAGE')
         root1.geometry('925x475+300+200')
         root1.config(bg='#CCCCCC')
 
@@ -135,7 +135,8 @@ def login():
                 contactnum TEXT NOT NULL,
                 gender TEXT NOT NULL
             )''')
-
+            def close3():
+                app.destroy()
 
             def signup():
                 userid = userid_entry.get()
@@ -164,7 +165,7 @@ def login():
             frame1 = Frame(app, bg='#D3D3D3', width=925, height=475.545)
             frame1.place(x=0, y=0)
 
-            img1 = Image.open('Mini IT Project/acc.jpg')
+            img1 = Image.open('acc.jpg')
             resized = img1.resize((338, 332))
             new_pic1 = ImageTk.PhotoImage(resized)
             image1_label = Label(frame1, image=new_pic1, bg='#D3D3D3')
@@ -216,6 +217,9 @@ def login():
             gender_entry.place(x=703, y=290)
             Frame(frame1, width=195, height=2, bg='black').place(x=696, y=315)
 
+            back_button = Button(app, text="<<<", command=close3, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
+            back_button.place(x=0, y=0)
+
             def toggle_password_visibility():
                 if show_password_var2.get():
                     password_entry.config(show='')
@@ -232,212 +236,254 @@ def login():
             signupbtn.place(x=565, y=360)
 
 
-        def editstud():    
-            root5 = Tk()
+        def editstud():
+            root5 = tk.Tk()
             root5.title('EDIT STUDENT INFORMATION')
             root5.geometry("975x475+300+200")
             root5.config(bg='#D3D3D3')
 
             font1 = ('Arial', 15, 'bold')
 
-            delete_box = Entry(root5, font=font1, fg='#000', bg='#fff', bd=3, width=26)
-            delete_box.place(x=450, y=150)
-            delete_box_label = Label(root5, text="Student ID :", font=font1, fg='black', bg='#D3D3D3')
-            delete_box_label.place(x=300, y=150)
-        
+            
+            font2 = ('Arial', 25, 'bold')
+            title = Label(root5, text ="Update Student information", bg='#D3D3D3', font=font2 )
+            title.place(x=300,y=30) 
+
             def close1():
                 root5.destroy()
 
             def update1():
-                # Create a database or connect to one
-                conn = sqlite3.connect('data.db')
-            
-
-                # Create cursor
-                c = conn.cursor()
-
-                record_id = delete_box.get()
-
+                selected_student_id = student_ids.get()
                 new_username = username_editor.get()
                 new_password = password_editor.get()
                 new_emailaddress = emailaddress_editor.get()
                 new_contactnum = contactnum_editor.get()
                 new_gender = gender_editor.get()
 
-
                 # Hash the new password before saving
                 encoded_password = new_password.encode('utf-8')
-                hashed_password = bcrypt.hashpw(encoded_password,
-                                                    bcrypt.gensalt())
+                hashed_password = bcrypt.hashpw(encoded_password, bcrypt.gensalt())
+
+                # Update student information in the database
+                conn = sqlite3.connect('data.db')
+                c = conn.cursor()
                 c.execute("""UPDATE users SET	
-                    username = :username,
-                    password = :password,
-                    emailaddress = :emailaddress,
-                    contactnum = :contactnum,
-                    gender = :gender
+                    username = ?,
+                    password = ?,
+                    emailaddress = ?,
+                    contactnum = ?,
+                    gender = ?
+                    WHERE userid = ?""",
+                    (new_username, hashed_password, new_emailaddress, new_contactnum, new_gender, selected_student_id))
 
-
-                    WHERE userid = :userid""",
-                    {
-                    'username': new_username,
-                    'password': hashed_password,
-                    'emailaddress': new_emailaddress,
-                    'contactnum' : new_contactnum,
-                    'gender' : new_gender,
-                    'userid': record_id
-                    }) 
-
-
-                    #Commit Changes
+                # Commit Changes
                 conn.commit()
 
-                # Close Connection 
+                # Close Connection
                 conn.close()
                 editor.destroy()
                 root5.deiconify()
-            
 
             def edit():
-                root.withdraw()
-                global editor
-                editor = Tk()
-                editor.title('Update A Record')
+                selected_student_id = student_ids.get()
+
+                # Check if a student ID is selected
+                if not selected_student_id:
+                    messagebox.showerror("Error", "Please select a Student ID")
+                    return
+
+                # Fetch student information from the database
+                conn = sqlite3.connect('data.db')
+                c = conn.cursor()
+                c.execute("SELECT * FROM users WHERE userid = ?", (selected_student_id,))
+                record = c.fetchone()
+                conn.close()
+
+                if not record:
+                    messagebox.showerror("Error", "Invalid Student ID")
+                    return
+
+                # Create a new popup window for editing
+                editor = tk.Toplevel(root5)
+                editor.title('Update Student Information')
                 editor.geometry("975x475+300+200")
                 editor.config(bg='#D3D3D3')
 
                 def close2():
-                   editor.destroy()
-                # Create a database or connect to one
-                conn = sqlite3.connect('data.db')
-                # Create cursor
-                c = conn.cursor()
-
-                record_id = delete_box.get()
-
-                # Query the database
-                c.execute("SELECT * FROM users WHERE userid = ?", (record_id,))
-                records = c.fetchall()
-
-                if not records:
                     editor.destroy()
-                    messagebox.showerror("Error", "Invalid Student ID ")
-                    return
-                    
-             
 
-                #Create Global Variables for text box names
-                global username_editor
-                global password_editor
-                global emailaddress_editor
-                global contactnum_editor
-                global gender_editor
-                
-                
-                    # Create Text Boxes
-                username_editor = Entry(editor, font=font1, fg='black', bg='#fff', bd=3, width=26)
+                def update1():
+                    new_username = username_editor.get()
+                    new_password = password_editor.get()
+                    new_emailaddress = emailaddress_editor.get()
+                    new_contactnum = contactnum_editor.get()
+                    new_gender = gender_editor.get()
+
+                    # Hash the new password before saving
+                    encoded_password = new_password.encode('utf-8')
+                    hashed_password = bcrypt.hashpw(encoded_password, bcrypt.gensalt())
+
+                    # Update student information in the database
+                    conn = sqlite3.connect('data.db')
+                    c = conn.cursor()
+                    c.execute("""UPDATE users SET	
+                        username = ?,
+                        password = ?,
+                        emailaddress = ?,
+                        contactnum = ?,
+                        gender = ?
+                        WHERE userid = ?""",
+                        (new_username, hashed_password, new_emailaddress, new_contactnum, new_gender, selected_student_id))
+
+                    # Commit Changes
+                    conn.commit()
+
+                    # Close Connection
+                    conn.close()
+                    editor.destroy()
+                    root5.deiconify()
+
+                # Create Text Boxes
+                username_editor = tk.Entry(editor, font=font1, fg='black', bg='#fff', bd=3, width=26)
                 username_editor.grid(row=0, column=1, padx=20, pady=(10, 0))
 
-                password_editor = Entry(editor, font=font1, fg='black', bg='#fff', bd=3, width=26)
+                password_editor = tk.Entry(editor, font=font1, fg='black', bg='#fff', bd=3, width=26)
                 password_editor.grid(row=1, column=1)
 
-                emailaddress_editor = Entry(editor, font=font1, fg='black', bg='#fff', bd=3, width=26)
+                emailaddress_editor = tk.Entry(editor, font=font1, fg='black', bg='#fff', bd=3, width=26)
                 emailaddress_editor.grid(row=2, column=1)
 
-                contactnum_editor = Entry(editor,font=font1, fg='black', bg='#fff', bd=3, width=26)
+                contactnum_editor = tk.Entry(editor, font=font1, fg='black', bg='#fff', bd=3, width=26)
                 contactnum_editor.grid(row=3, column=1)
 
-                gender_editor = Entry(editor, font=font1, fg='black', bg='#fff', bd=3, width=26)
+                gender_editor = tk.Entry(editor, font=font1, fg='black', bg='#fff', bd=3, width=26)
                 gender_editor.grid(row=4, column=1)
 
-                    # Create Text Box Labels
-                username_label = Label(editor, text=" Name", font=font1,fg='black', bg='#D3D3D3')
+                # Create Text Box Labels
+                username_label = tk.Label(editor, text=" Name", font=font1, fg='black', bg='#D3D3D3')
                 username_label.grid(row=0, column=0, pady=(10, 0))
-                password_label = Label(editor, text="Password", font=font1,fg='black', bg='#D3D3D3')
+
+                password_label = tk.Label(editor, text="Password", font=font1, fg='black', bg='#D3D3D3')
                 password_label.grid(row=1, column=0)
-                emailaddress_label = Label(editor, text="Email Address", font=font1,fg='black', bg='#D3D3D3')
+
+                emailaddress_label = tk.Label(editor, text="Email Address", font=font1, fg='black', bg='#D3D3D3')
                 emailaddress_label.grid(row=2, column=0)
-                contactnum_label = Label(editor, text="Contact Number", font=font1,fg='black', bg='#D3D3D3')
+
+                contactnum_label = tk.Label(editor, text="Contact Number", font=font1, fg='black', bg='#D3D3D3')
                 contactnum_label.grid(row=3, column=0)
-                gender_label = Label(editor, text="Gender",font=font1,fg='black', bg='#D3D3D3')
+
+                gender_label = tk.Label(editor, text="Gender", font=font1, fg='black', bg='#D3D3D3')
                 gender_label.grid(row=4, column=0)
 
-                # Loop thru results
-                for record in records:
-                    username_editor.insert(0, record[1])
-                    #password_editor.insert(0, record[2])
-                    emailaddress_editor.insert(0, record[3])
-                    contactnum_editor.insert(0, record[4])
-                    gender_editor.insert(0, record[5])
-
+                # Populate the text entry fields with fetched data
+                username_editor.insert(0, record[1])
+                emailaddress_editor.insert(0, record[3])
+                contactnum_editor.insert(0, record[4])
+                gender_editor.insert(0, record[5])
 
                 # Create a Save Button To Save edited record
-                edit_btn = Button(editor, text="Update information", command=update1,font=font1, fg='#fff', bg='#05A312', relief='raised', borderwidth=2, cursor='hand2', width=26)
+                edit_btn = tk.Button(editor, text="Update information", command=update1, font=font1, fg='#fff', bg='#05A312', relief='raised', borderwidth=2, cursor='hand2', width=26)
                 edit_btn.grid(row=6, column=0, columnspan=2, pady=10, padx=10, ipadx=145)
 
-                back_button = Button(editor, text="BACK", command=close2,font=font1, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=15)
-                back_button.grid(row=10,  column=0, columnspan=2, pady=10, padx=10, ipadx=145)
-        
+                back_button = tk.Button(editor, text="BACK", command=close2, font=font1, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=15)
+                back_button.grid(row=10, column=0, columnspan=2, pady=10, padx=10, ipadx=145)
 
-            # Create a Save Button To Save edited record
-            edit_btn = Button(root5, text="SEARCH", command=edit,font=font1,fg='#fff', bg='#05A312', relief='raised', borderwidth=2, cursor='hand2', width=26)
-            edit_btn.place(x=300,y=200)   
+            # Create a Combobox to display student IDs
+            student_ids = ttk.Combobox(root5, font=font1, state="readonly", width=30)
+            student_ids.place(x=450, y=150)
+            student_ids_label = tk.Label(root5, text="Select Student ID:", font=font1, fg='black', bg='#D3D3D3')
+            student_ids_label.place(x=250, y=150)
 
-            back_button2 = Button(root5, text="<<<", command=close1,font=font1, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
+            # Create a Search Button
+            search_btn = tk.Button(root5, text="SEARCH", command=edit, font=font1, fg='#fff', bg='#05A312', relief='raised', borderwidth=2, cursor='hand2', width=26)
+            search_btn.place(x=340, y=220)
+
+            back_button2 = tk.Button(root5, text="<<<", command=close1, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
             back_button2.place(x=0, y=0)
 
+            # Populate the Combobox with student IDs from the database
+            conn = sqlite3.connect('data.db')
+            c = conn.cursor()
+            c.execute("SELECT userid FROM users")
+            student_id_list = [record[0] for record in c.fetchall()]
+            conn.close()
+            student_ids["values"] = student_id_list
+
+            root5.mainloop()
         
 
-        def deletefunction():
-            df = Toplevel()
-            df.title("STUDENT PERSONAL INFORMATION")
+        def delete_function():
+            df = tk.Toplevel()
+            df.title("DELETE STUDENT INFORMATION")
             df.geometry("975x475+300+200")
             df.config(bg='#D3D3D3')
 
             font1 = ('Arial', 15, 'bold')
 
+            font2 = ('Arial', 25, 'bold')
+            title = Label(df, text ="Delete Student record", bg='#D3D3D3', font=font2 )
+            title.place(x=330,y=30) 
+
             def close():
                 df.destroy()
-                
-
-            delete_box = Entry(df, font=font1, fg='#000', bg='#fff', bd=3, width=26)
-            delete_box.place(x=450, y=150)
-            delete_box_label = Label(df, text="Student ID :",font=font1, fg='black', bg='#D3D3D3')
-            delete_box_label.place(x=300, y=150)
-            
 
             def delete():
-            # Create a database or connect to one
-                conn = sqlite3.connect('data.db')
+                selected_student_id = student_ids.get()
 
-            # Create cursor
-                c = conn.cursor()
-                c.execute("SELECT * FROM users WHERE userid = ?", (delete_box.get(),))
-                records = c.fetchall()
-
-                if not records:
-                    messagebox.showerror("Error", "Invalid Student ID ")
+                # Check if a student ID is selected
+                if not selected_student_id:
+                    messagebox.showerror("Error", "Please select a Student ID")
                     return
 
-                else :
-                    # Delete a record
-                    c.execute('DELETE FROM users WHERE userid = ?', (delete_box.get(),))
+                # Create a database or connect to one
+                conn = sqlite3.connect('data.db')
 
-                    delete_box.delete(0, END)
-                    #Commit Changes
+                # Create cursor
+                c = conn.cursor()
+
+                # Check if the selected student ID exists in the database
+                c.execute("SELECT * FROM users WHERE userid = ?", (selected_student_id,))
+                record = c.fetchone()
+
+                if not record:
+                    messagebox.showerror("Error", "Invalid Student ID")
+                else:
+                    # Delete the selected record
+                    c.execute('DELETE FROM users WHERE userid = ?', (selected_student_id,))
+                    # Commit Changes
                     conn.commit()
-                    # Close Connection 
+                    messagebox.showinfo("Success", "Record Deleted Successfully")
 
-                    conn.close()
-                    messagebox.showinfo("Sucess", "DELETED")
-                
+                # Close Connection
+                conn.close()
 
-            #Create A Delete Button
-            delete_btn = Button(df, text="Delete Record", command=delete,font=font1, fg='#fff', bg='#05A312', relief='raised', borderwidth=2, cursor='hand2', width=26)
-            delete_btn.place(x=350,y=205)
-            #messagebox.showinfo("Sucessful deleted")
+                # Refresh the student_ids Combobox
+                refresh_student_ids()
 
-            back_button = Button(df, text="<<<", command=close,font=font1, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
+            def refresh_student_ids():
+                # Populate the Combobox with student IDs from the database
+                conn = sqlite3.connect('data.db')
+                c = conn.cursor()
+                c.execute("SELECT userid FROM users")
+                student_id_list = [record[0] for record in c.fetchall()]
+                conn.close()
+                student_ids["values"] = student_id_list
+
+            # Create a Combobox to display student IDs
+            student_ids = ttk.Combobox(df, font=font1, state="readonly", width=24)
+            student_ids.place(x=450, y=150)
+            student_ids_label = tk.Label(df, text="Select Student ID:", font=font1, fg='black', bg='#D3D3D3')
+            student_ids_label.place(x=250, y=150)
+
+            # Create a Delete Button
+            delete_btn = tk.Button(df, text="Delete Record", command=delete, font=font1, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=26)
+            delete_btn.place(x=340, y=220)
+
+            back_button = tk.Button(df, text="<<<", command=close, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
             back_button.place(x=0, y=0)
+
+            # Initially refresh the student IDs
+            refresh_student_ids()
                 
 
 
@@ -447,6 +493,13 @@ def login():
             new.geometry("975x475+300+200")
             new.config(bg='#D3D3D3')
 
+            def close4():
+                new.destroy()
+
+            font1 = ('Arial', 20, 'bold')
+            title = Label(new, text ="Student account management", bg='#D3D3D3', font=font1 )
+            title.place(x=280,y=30)       
+
             frame111 = LabelFrame(new, text="Click Here ...",bg="#ECECEC", padx=110, pady=80)
             frame111.place(x=40,y=85)  
 
@@ -454,8 +507,11 @@ def login():
             myButton.grid(row=0, column=0,padx=15,pady=15)
             myButton2 = Button(frame111, text="UPDATE ",command=editstud,fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=15,height=3)
             myButton2.grid(row=0, column=1,padx=15,pady=15)
-            myButton3 = Button(frame111, text="DELETE ",  command=deletefunction,fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=15,height=3)
+            myButton3 = Button(frame111, text="DELETE ",  command=delete_function,fg='#fff', bg='#3F3F3F', font=('Arial', 16),relief='raised', borderwidth=2, cursor='hand2',width=15,height=3)
             myButton3.grid(row=0, column=2,padx=15,pady=15)
+
+            back_button = Button(new, text="<<<", command=close4, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
+            back_button.place(x=0, y=0)
 
         def student_list():
             r = tk.Tk()
@@ -463,6 +519,12 @@ def login():
             r.geometry('925x475+300+200')
             r.configure(bg='#D3D3D3')
             r.resizable(False, False)
+
+            def close5():
+                r.destroy()
+ 
+            myLabel = tk.Label(r, text="Student List", bg='#D3D3D3', font=('Calibri, 15'))
+            myLabel.place(x=400, y=1)
 
             connect = sqlite3.connect(database="data.db")
 
@@ -499,13 +561,18 @@ def login():
             tree.heading("emailaddress", text="EMAIL", anchor=tk.CENTER)
             tree.heading("contactnum", text="CONTACT", anchor=tk.CENTER)
             tree.heading("gender", text="GENDER", anchor=tk.CENTER)
+            
+            tree.place(x=60, y=25)
 
             i = 0
             for ro in conn:
                 tree.insert('', i, text=" ", values=(ro[0], ro[1], ro[3], ro[4], ro[5]))
 
+            back_button = Button(r, text="<<<", command=close5, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
+            back_button.place(x=0, y=0)
+
             
-            tree.pack()
+            r.mainloop()
 
 
         def course_information():
@@ -590,6 +657,7 @@ def login():
 
             font1 = ('Arial', 15, 'bold')
             font2 = ('Arial', 12, 'bold')
+            font3 = ('Arial', 10)
 
             def close_app():
                 apps.destroy()
@@ -708,11 +776,17 @@ def login():
             subject_name_entry = tk.Entry(apps, font=font1, fg='#000', bg='#fff', bd=3, width=26)
             subject_name_entry.place(x=170, y=80)
 
+            remark1 = tk.Label(apps, text="* ( Exp: MATH1 )", bg='#D3D3D3', font=font3,fg='red')
+            remark1.place(x=170,y=58)
+
             subject_code_label = tk.Label(apps, font=font1, text='Subject Code  : ', fg='black', bg='#D3D3D3')
             subject_code_label.place(x=20, y=140)
 
             subject_code_entry = tk.Entry(apps, font=font1, fg='#000', bg='#fff', bd=3, width=26)
             subject_code_entry.place(x=170, y=140)
+
+            remark2 = tk.Label(apps, text="* ( Exp: PMT0101 )", bg='#D3D3D3', font=font3,fg='red')
+            remark2.place(x=170,y=118)
 
             credit_hour_label = tk.Label(apps, font=font1, text='Credit Hour     : ', fg='black', bg='#D3D3D3')
             credit_hour_label.place(x=20, y=200)
@@ -720,17 +794,26 @@ def login():
             credit_hour_entry = tk.Entry(apps, font=font1, fg='#000', bg='#fff', bd=3, width=26)
             credit_hour_entry.place(x=170, y=200)
 
+            remark3 = tk.Label(apps, text="* ( Exp: 2 , 3 , 4 )", bg='#D3D3D3', font=font3,fg='red')
+            remark3.place(x=170,y=178)
+
             classes_type_label = tk.Label(apps, font=font1, text='Class  Type    : ', fg='black', bg='#D3D3D3')
             classes_type_label.place(x=20, y=260)
 
             classes_type_entry = tk.Entry(apps, font=font1, fg='#000', bg='#fff', bd=3, width=26)
             classes_type_entry.place(x=170, y=260)
 
-            lecture_name_label = tk.Label(apps, font=font1, text='Lecture Name : ', fg='black', bg='#D3D3D3')
+            remark4 = tk.Label(apps, text="* ( Exp: LECTURE / TUTORIAL / LABORATORY )", bg='#D3D3D3', font=font3,fg='red')
+            remark4.place(x=170,y=238)
+
+            lecture_name_label = tk.Label(apps, font=font1, text='Lecturer Name: ', fg='black', bg='#D3D3D3')
             lecture_name_label.place(x=20, y=320)
 
             lecture_name_entry = tk.Entry(apps, font=font1, fg='#000', bg='#fff', bd=3, width=26)
             lecture_name_entry.place(x=170, y=320)
+
+            remark5 = tk.Label(apps, text="* ( Exp: MR TONG / MS TAN )", bg='#D3D3D3', font=font3,fg='red')
+            remark5.place(x=170,y=298)
 
             class_label = tk.Label(apps, font=font1, text='Class              : ', fg='black', bg='#D3D3D3')
             class_label.place(x=20, y=380)
@@ -738,11 +821,17 @@ def login():
             class_entry = tk.Entry(apps, font=font1, fg='#000', bg='#fff', bd=3, width=26)
             class_entry.place(x=170, y=380)
 
+            remark6 = tk.Label(apps, text="* ( Exp: PMT TC1L / PMT TT1L )", bg='#D3D3D3', font=font3,fg='red')
+            remark6.place(x=170,y=358)
+
             capacity_label = tk.Label(apps, font=font1, text='Capacity         : ', fg='black', bg='#D3D3D3')
             capacity_label.place(x=20, y=440)
 
             capacity_entry = tk.Entry(apps, font=font1, fg='#000', bg='#fff', bd=3, width=26)
             capacity_entry.place(x=170, y=440)
+
+            remark7 = tk.Label(apps, text="* ( Exp: 5 / 10 /15 / 20 ...... )", bg='#D3D3D3', font=font3,fg='red')
+            remark7.place(x=170,y=418)
 
             class_day_label = tk.Label(apps, font=font1, text='Class Day       : ', fg='black', bg='#D3D3D3')
             class_day_label.place(x=20, y=500)
@@ -750,11 +839,17 @@ def login():
             class_day_entry = tk.Entry(apps, font=font1, fg='#000', bg='#fff', bd=3, width=26)
             class_day_entry.place(x=170, y=500)
 
+            remark8 = tk.Label(apps, text="* ( Exp: MONDAY / TUESDAY ...... )", bg='#D3D3D3', font=font3,fg='red')
+            remark8.place(x=170,y=478)
+
             class_time_label = tk.Label(apps, font=font1, text='Class Time     : ', fg='black', bg='#D3D3D3')
             class_time_label.place(x=20, y=560)
 
             class_time_entry = tk.Entry(apps, font=font1, fg='#000', bg='#fff', bd=3, width=26)
             class_time_entry.place(x=170, y=560)
+
+            remark9 = tk.Label(apps, text="* MUST PUT '-' ( Exp: 0000 - 0000 )", bg='#D3D3D3', font=font3,fg='red')
+            remark9.place(x=170,y=538)
 
             venue_label = tk.Label(apps, font=font1, text='Venue             : ', fg='black', bg='#D3D3D3')
             venue_label.place(x=20, y=620)
@@ -762,6 +857,8 @@ def login():
             venue_entry = tk.Entry(apps, font=font1, fg='#000', bg='#fff', bd=3, width=26)
             venue_entry.place(x=170, y=620)
 
+            remark10 = tk.Label(apps, text="* ( Exp: CQAR 2001 / CMNX 0001 )", bg='#D3D3D3', font=font3,fg='red')
+            remark10.place(x=170,y=598)
 
             # Replace custom button widget with standard tkinter.Button widget
             add_button = tk.Button(apps, command=insert, font=font1, text='Add Subject', fg='#fff', bg='#05A312', relief='raised', borderwidth=2, cursor='hand2', width=26)
@@ -805,7 +902,7 @@ def login():
             tree.heading('subject_code',text='Subject Code')
             tree.heading('credit_hour',text='Credit Hour')
             tree.heading('class_type',text='Class Type')
-            tree.heading('lecture_name',text='Lecture Name')
+            tree.heading('lecture_name',text='Lecturer Name')
             tree.heading('classes',text='Class')
             tree.heading('capacity',text='Capacity')
             tree.heading('class_day',text='Class Day')
@@ -879,6 +976,9 @@ def login():
             gui = tk.Tk()
             gui.title("Average Ratings Histogram")
 
+            def close6():
+                gui.destroy()
+
             # Create a Matplotlib figure
             fig, ax = plt.subplots(figsize=(9, 7), dpi=60)
 
@@ -897,6 +997,10 @@ def login():
             # Create a Tkinter canvas to display the Matplotlib figure
             canvas = FigureCanvasTkAgg(fig, master=gui)
             canvas.get_tk_widget().pack()
+
+            back_button = Button(gui, text="<<<", command=close6, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
+            back_button.place(x=0, y=0)
+
 
             # Start the Tkinter main loop
             gui.mainloop()
@@ -937,7 +1041,7 @@ def login():
             if bcrypt.checkpw(password.encode('utf-8'), result[0]):
                 root.withdraw()  # Hide the original login window
                 root60 = Tk()
-                root60.title("User GUI")
+                root60.title("STUDENT MAIN PAGE")
                 root60.geometry('925x475+300+200')
                 root60.configure(bg='#D3D3D3')
                 root60.resizable(False, False)
@@ -957,6 +1061,9 @@ def login():
                     apps2.title('Time Table')
                     apps2.geometry('925x475+300+200')
                     apps2.config(bg='#D3D3D3')
+
+                    def close7():
+                        apps2.destroy()
 
                     myLabel = tk.Label(apps2, text="TIME TABLE", bg='#D3D3D3', font=('Calibri, 15'))
                     myLabel.place(x=400, y=1)
@@ -1020,6 +1127,9 @@ def login():
                     for row in conn:
                         tree.insert('', i, text=" ", values=(row[5], row[9], row[10], row[11], row[2], row[7],row[12]))
 
+                    back_button = Button(apps2, text="<<<", command=close7, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
+                    back_button.place(x=0, y=0)
+
                     apps2.mainloop()
 
                 
@@ -1031,6 +1141,8 @@ def login():
                         # Get the selected item's course information
                         selected_item = tree.selection()
 
+                    def close8():
+                        browse_course_window.destroy()
 
                     browse_course_window = Toplevel(root60)
                     browse_course_window.title("Course Offered")
@@ -1072,6 +1184,10 @@ def login():
                     # Bind the double-click event handler to the Treeview
 
                     tree.bind("<Double-1>", on_item_double_click)
+
+                    back_button = Button(browse_course_window, text="<<<", command=close8, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
+                    back_button.place(x=0, y=0)
+
 
 
                 
@@ -1244,10 +1360,6 @@ def login():
                                 messagebox.showerror("", "Class is full. Registration is not allowed.")
                                 return
 
-                            # if check_course_clashes(student_id, class_day, class_start_time + '-' + class_end_time):
-                            #     messagebox.showerror("", "Time or day clash with a registered course.")
-                            #     return
-
                             if check_course_clashes(student_id, class_day, class_start_time + '-' + class_end_time):
                                 messagebox.showerror("", "Time or day clash with a registered course.")
                                 return
@@ -1344,6 +1456,10 @@ def login():
                     root.attributes('-fullscreen', True)
                     # Configure the window manager attributes for decorations
                     root.overrideredirect(False)  # Set to True to remove decorations
+                    
+                    font1 = ('Arial', 12, 'bold')
+                    font2 = ('Arial', 15, 'bold')
+                    font3 = ('Arial', 10, 'bold')
 
                     style = ttk.Style(root)
                     style.theme_use('clam')
@@ -1351,10 +1467,10 @@ def login():
                     style.map('Treeview', background=[('selected', '#1A8F2D')])
 
                     # course_tree = ttk.Treeview(root, height=10)
-                    course_tree = ttk.Treeview(root,height=18, columns=("ID", "Course Name", "Course Code", "Credit Hours", "Class Type", "Lecture Name", "Classes", "Capacity", "Class Day", "Class Time", "Venue"))
+                    course_tree = ttk.Treeview(root,height=18, columns=("ID", "Course Name", "Course Code", "Credit Hours", "Class Type", "Lecturer Name", "Classes", "Capacity", "Class Day", "Class Time", "Venue"))
                     course_tree.column('#0', width=0, stretch=tk.NO)
                     course_tree['show'] = 'headings'
-                    columns = ("ID", "Course Name", "Course Code", "Credit Hours", "Class Type", "Lecture Name", "Classes", "Capacity", "Class Day", "Class Time", "Venue")
+                    columns = ("ID", "Course Name", "Course Code", "Credit Hours", "Class Type", "Lecturer Name", "Classes", "Capacity", "Class Day", "Class Time", "Venue")
                     for col in columns:
                         course_tree.column(col, width=97)
                         course_tree.heading(col, text=col, anchor=tk.CENTER)
@@ -1369,95 +1485,101 @@ def login():
                     course_tree.place(x=10,y=10)
                     course_tree.bind("<<TreeviewSelect>>", update_selected_course)
 
-                    course_label = tk.Label(root, text="Select Course:", bg='#D3D3D3')
+                    course_label = tk.Label(root, text="Select Course     :", bg='#D3D3D3', font=font1,fg='black')
                     courses = load_courses()
                     course_entry = ttk.Entry(root, state='readonly')
 
-                    course_code_label = tk.Label(root, text="Course code:", bg='#D3D3D3')
+                    course_code_label = tk.Label(root, text="Course code       :", bg='#D3D3D3', font=font1,fg='black')
                     course_code_entry = ttk.Entry(root, state='readonly')
 
-                    student_id_label = tk.Label(root, text="Student ID:", bg='#D3D3D3')
+                    student_id_label = tk.Label(root, text="Student ID           :", bg='#D3D3D3', font=font1,fg='black')
                     student_id_entry = ttk.Entry(root)
 
-                    class_type_label = tk.Label(root, text="Class Type:", bg='#D3D3D3')
+                    class_type_label = tk.Label(root, text="Class Type          :", bg='#D3D3D3', font=font1,fg='black')
                     class_type_entry = ttk.Entry(root, state='readonly')
 
-                    credit_hour_label = tk.Label(root, text="Credit_hour:", bg='#D3D3D3')
+                    credit_hour_label = tk.Label(root, text="Credit_hour        :", bg='#D3D3D3', font=font1,fg='black')
                     credit_hour_entry = ttk.Entry(root, state='readonly')
 
-                    lecture_name_label = tk.Label(root, text="Lecture Name:", bg='#D3D3D3')
+                    lecture_name_label = tk.Label(root, text="Lecturer Name     :", bg='#D3D3D3', font=font1,fg='black')
                     lecture_name_entry = ttk.Entry(root, state='readonly')
 
-                    classes_label = tk.Label(root, text="Classes:", bg='#D3D3D3')
+                    classes_label = tk.Label(root, text="Classes                :", bg='#D3D3D3', font=font1,fg='black')
                     classes_entry = ttk.Entry(root, state='readonly')
 
-                    class_day_label = tk.Label(root, text="Class Day:", bg='#D3D3D3')
+                    class_day_label = tk.Label(root, text="Class Day            :", bg='#D3D3D3', font=font1,fg='black')
                     class_day_entry = ttk.Entry(root, state='readonly')
 
-                    class_start_time_label = tk.Label(root, text="Class Start Time:", bg='#D3D3D3')
+                    class_start_time_label = tk.Label(root, text="Class Start Time :", bg='#D3D3D3', font=font1,fg='black')
                     class_start_time_entry = ttk.Entry(root, state='readonly')
 
-                    class_end_time_label = tk.Label(root, text="Class End Time:", bg='#D3D3D3')
+                    class_end_time_label = tk.Label(root, text="Class End Time  :", bg='#D3D3D3', font=font1,fg='black')
                     class_end_time_entry = ttk.Entry(root, state='readonly')
 
-                    venue_label = tk.Label(root, text="Venue:", bg='#D3D3D3')
+                    venue_label = tk.Label(root, text="Venue                    :", bg='#D3D3D3', font=font1,fg='black')
                     venue_entry = ttk.Entry(root, state='readonly')
 
-                    capacity_label = tk.Label(root, text="Capacity:", bg='#D3D3D3')
+                    capacity_label = tk.Label(root, text="Capacity               :", bg='#D3D3D3', font=font1,fg='black')
                     capacity_entry = ttk.Entry(root, state='readonly')
 
-                    save_button = tk.Button(root, text="Save Registration", command=save_registration)
+                    save_button = tk.Button(root, text="Save Registration", command=save_registration,font=font2,fg='#fff', bg='#05A312', relief='raised', borderwidth=2, cursor='hand2', width=26)
 
                     # Arrange widgets in a grid
                     course_label.place(x=1100,y=20)
-                    course_entry.place(x=1200,y=20)
+                    course_entry.place(x=1250,y=20)
 
                     course_code_label.place(x=1100,y=50)
-                    course_code_entry.place(x=1200,y=50)
+                    course_code_entry.place(x=1250,y=50)
 
                     student_id_label.place(x=1100,y=80)
-                    student_id_entry.place(x=1200,y=80)
+                    student_id_entry.place(x=1250,y=80)
 
                     class_type_label.place(x=1100,y=110)
-                    class_type_entry.place(x=1200,y=110)
+                    class_type_entry.place(x=1250,y=110)
 
                     credit_hour_label.place(x=1100,y=140)
-                    credit_hour_entry.place(x=1200,y=140)
+                    credit_hour_entry.place(x=1250,y=140)
 
                     lecture_name_label.place(x=1100,y=170)
-                    lecture_name_entry.place(x=1200,y=170)
+                    lecture_name_entry.place(x=1250,y=170)
 
                     class_day_label.place(x=1100,y=200)
-                    class_day_entry.place(x=1200,y=200)
+                    class_day_entry.place(x=1250,y=200)
 
                     class_start_time_label.place(x=1100,y=230)
-                    class_start_time_entry.place(x=1200,y=230)
+                    class_start_time_entry.place(x=1250,y=230)
 
                     class_end_time_label.place(x=1100,y=260)
-                    class_end_time_entry.place(x=1200,y=260)
+                    class_end_time_entry.place(x=1250,y=260)
 
                     venue_label.place(x=1100,y=290)
-                    venue_entry.place(x=1200,y=290)
+                    venue_entry.place(x=1250,y=290)
 
                     classes_label.place(x=1100,y=320)
-                    classes_entry.place(x=1200,y=320)
+                    classes_entry.place(x=1250,y=320)
 
                     capacity_label.place(x=1100,y=350)
-                    capacity_entry.place(x=1200,y=350)
+                    capacity_entry.place(x=1250,y=350)
 
-                    save_button.place(x=1200,y=400)
+                    save_button.place(x=1100,y=400)
 
-                    close_button = tk.Button(root, text="close", command=close_register)
-                    close_button.place(x=1200,y=500)
+                    close_button = tk.Button(root, text="Close", command=close_register,font=font2,fg='#fff', bg='red', relief='raised', borderwidth=2, cursor='hand2', width=26)
+                    close_button.place(x=1100,y=680)
                     
-                    view_capacity_button = tk.Button(root, text="View Class Capacity", command=view_class_capacity)
-                    view_capacity_button.place(x=1200,y=450)
+                    view_capacity_button = tk.Button(root, text="View Class Capacity", command=view_class_capacity,font=font2, fg='#fff', bg='#161C25', relief='raised', borderwidth=2, cursor='hand2', width=26)
+                    view_capacity_button.place(x=1100,y=580)
 
-                    refresh_button = tk.Button(root, text="Refresh", command=refresh)
-                    refresh_button.place(x=1200,y=600)
+                    refresh_button = tk.Button(root, text="Refresh", command=refresh,font=font2,fg='#fff', bg='#05A312', relief='raised', borderwidth=2, cursor='hand2', width=26)
+                    refresh_button.place(x=1100,y=480)
 
-                    title_label = tk.Label(root, text="Draft Timetable", bg='#D3D3D3')
-                    title_label.place(x=500,y=405)
+                    remark1 = tk.Label(root, text="* Please clicked Refresh after save registration", bg='#D3D3D3', font=font3,fg='red')
+                    remark1.place(x=1100,y=450)
+
+                    remark2 = tk.Label(root, text="* Please double clicked the data inside draft timetable to delete the subject", bg='#D3D3D3', font=font3,fg='red')
+                    remark2.place(x=470,y=405)
+
+                    title_label = tk.Label(root, text="Draft Timetable", bg='#D3D3D3',font=font1)
+                    title_label.place(x=300,y=405)
 
                     global userid_entry2
 
@@ -1621,6 +1743,9 @@ def login():
                     apps3.geometry('925x475+300+200')
                     apps3.config(bg='#D3D3D3')
 
+                    def close10():
+                        apps3.destroy()
+
                     myLabel = tk.Label(apps3, text="Survey Rank", bg='#D3D3D3', font=('Calibri, 15'))
                     myLabel.place(x=400, y=1)
 
@@ -1659,7 +1784,7 @@ def login():
                     tree.heading('class_type', text='Type', anchor=tk.CENTER)
                     tree.heading('subject_name', text='Subject', anchor=tk.CENTER)
                     tree.heading('subject_code', text='Subject code', anchor=tk.CENTER)
-                    tree.heading('lecture_name', text='Lecture name', anchor=tk.CENTER)
+                    tree.heading('lecture_name', text='Lecturer name', anchor=tk.CENTER)
 
                     tree.place(x=50, y=25)
 
@@ -1669,6 +1794,9 @@ def login():
 
                     # Bind the function to open the rating popup window to the Treeview item selection event
                     tree.bind('<ButtonRelease-1>', lambda event: open_rating_popup(tree.item(tree.selection())['values'][1], tree.item(tree.selection())['values'][3], student_id))
+
+                    back_button = Button(apps3, text="<<<", command=close10, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
+                    back_button.place(x=0, y=0)
 
                     apps3.mainloop()
 
@@ -1737,6 +1865,12 @@ def login():
 
                     app111 = tk.Tk()
                     app111.title('Student List In Class')
+                    app111.geometry('925x475+300+200')
+                    app111.resizable(False, False)
+                    app111.config(bg='#D3D3D3')
+
+                    def close9():
+                        app111.destroy()
 
                     # Configure the style
                     style = ttk.Style(app111)
@@ -1744,22 +1878,26 @@ def login():
                     style.configure('Treeview', font=('Arial', 12, 'bold'), foreground='#fff', background='#000', fieldbackground='#313837')
                     style.map('Treeview', background=[('selected', '#1A8F2D')])
 
+
                     # Get all classes and create a combobox
                     classes_from_register = get_classes_from_register()
                     classes_combobox = ttk.Combobox(app111, values=classes_from_register)
-                    classes_combobox.pack()
+                    classes_combobox.place(x=390,y=50)
 
-                    search_button = tk.Button(app111, text='Search', command=show_students_for_selected_class)
-                    search_button.pack()
+                    search_button = tk.Button(app111, text='Search', command=show_students_for_selected_class, fg='#fff', bg='#05A312', relief='raised', borderwidth=2, cursor='hand2', width=26)
+                    search_button.place(x=360,y=90)
 
                     # Create Treeview to display student list
                     result_tree = ttk.Treeview(app111, columns=('Student ID', 'Student Name'))
                     result_tree.heading('#1', text='Student ID')
                     result_tree.heading('#2', text='Student Name')
-                    result_tree.pack()
+                    result_tree.place(x=260,y=140)
 
                     # Hide the first column
                     result_tree.column('#0', width=0, stretch=tk.NO)
+
+                    back_button = Button(app111, text="<<<", command=close9, fg='#fff', bg='#E40404', relief='raised', borderwidth=2, cursor='hand2', width=4)
+                    back_button.place(x=0, y=0)
 
                     app111.mainloop()
 
@@ -1790,7 +1928,7 @@ def login():
 frame2 = Frame(root, bg='#D3D3D3', width=925, height=475.545)
 frame2.place(x=0, y=0)
 
-img = Image.open('Mini IT Project/MMU_LOGO.PNG')
+img = Image.open('MMU_LOGO.PNG')
 resized = img.resize((398, 332))
 new_pic = ImageTk.PhotoImage(resized)
 Label(frame2, image=new_pic, bg='#D3D3D3').place(x=50, y=60)
